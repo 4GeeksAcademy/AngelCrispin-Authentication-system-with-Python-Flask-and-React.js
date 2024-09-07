@@ -1,15 +1,19 @@
-import React from "react";
+import React, { useContext, useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import ScrollToTop from "./component/scrollToTop";
 import { BackendURL } from "./component/backendURL";
 
 import { Home } from "./pages/home";
-import { Demo } from "./pages/demo";
-import { Single } from "./pages/single";
+import { Login } from "./pages/login";
+import { Private } from "./pages/private";
+import { NotFound } from "./pages/notfound";
+import { NotAllowed } from "./pages/notallowed";
 import injectContext from "./store/appContext";
 
 import { Navbar } from "./component/navbar";
 import { Footer } from "./component/footer";
+
+import { Context } from "./store/appContext";
 
 //create your first component
 const Layout = () => {
@@ -19,6 +23,9 @@ const Layout = () => {
 
     if(!process.env.BACKEND_URL || process.env.BACKEND_URL == "") return <BackendURL/ >;
 
+
+	const { store, actions } = useContext(Context);
+
     return (
         <div>
             <BrowserRouter basename={basename}>
@@ -26,9 +33,13 @@ const Layout = () => {
                     <Navbar />
                     <Routes>
                         <Route element={<Home />} path="/" />
-                        <Route element={<Demo />} path="/demo" />
-                        <Route element={<Single />} path="/single/:theid" />
-                        <Route element={<h1>Not found!</h1>} />
+                        <Route element={<Login />} path="/login" />
+                        {
+                            store.isLogged
+                                ? <Route element={<Private />} path="/private" />
+                                : <Route element={<NotAllowed />} path="/notallowed" />
+                        }
+                        <Route element={<NotFound />} path="*" />
                     </Routes>
                     <Footer />
                 </ScrollToTop>

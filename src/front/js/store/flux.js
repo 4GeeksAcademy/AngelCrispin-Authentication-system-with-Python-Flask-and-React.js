@@ -1,51 +1,96 @@
+
 const getState = ({ getStore, getActions, setStore }) => {
 	return {
 		store: {
+			isLogged: true,
 			message: null,
-			demo: [
-				{
-					title: "FIRST",
-					background: "white",
-					initial: "white"
-				},
-				{
-					title: "SECOND",
-					background: "white",
-					initial: "white"
-				}
-			]
+			userList: []
 		},
 		actions: {
 			// Use getActions to call a function within a fuction
-			exampleFunction: () => {
-				getActions().changeColor(0, "green");
+			checkSession: () => {
+				var session = localStorage.getItem("token");
+				if(!session)
+					setStore({...getStore(), isLogged: false })
 			},
-
-			getMessage: async () => {
+			checkAPI: async () => {
 				try{
 					// fetching data from the backend
-					const resp = await fetch(process.env.BACKEND_URL + "/api/hello")
+					const resp = await fetch(process.env.BACKEND_URL + "/checkStatus")
 					const data = await resp.json()
-					setStore({ message: data.message })
+					setStore({...getStore(), message: data.message })
 					// don't forget to return something, that is how the async resolves
 					return data;
 				}catch(error){
 					console.log("Error loading message from backend", error)
+					setStore({...getStore(), message: "API off, check the connection"})
 				}
 			},
-			changeColor: (index, color) => {
-				//get the store
-				const store = getStore();
+			register: async (formData) => {
+				try{
+					const response = await fetch(process.env.BACKEND_URL+"/register", {
+						method: "POST",
+						body: JSON.stringify(formData),
+						headers:{
+							"Content-type": "application/json"
+						}
+					})
+					let data = await response.json()
+					return data
+					
+				}catch(e){
+					console.error("Error in registration:", e)
+				}
+			},
+			login: async (loginForm) => {
+				try{
+					const response = await fetch(process.env.BACKEND_URL+"/login", {
+						method: "POST",
+						body: JSON.stringify(loginForm),
+						headers:{
+							"Content-type": "application/json"
+						}
+					})
+					const data = await response.json()
+					
+					if (response.ok){
+						localStorage.setItem("token", data.access_token)
+						localStorage.setItem("username", data.username)			
+						setStore({...getStore(), isLogged: true })			
+					} 
+					return response;
 
-				//we have to loop the entire demo array to look for the respective index
-				//and change its color
-				const demo = store.demo.map((elm, i) => {
-					if (i === index) elm.background = color;
-					return elm;
-				});
+				}catch(e){
+					console.error(e)
+				}
+			}, getList: async () => {
+				const token = localStorage.getItem("token")
+				if(!token){
+					alert("first login to get token")
+					return
+				}
+				try{
+					const response = await fetch(process.env.BACKEND_URL+"/users", {
+						headers:{
+							Authorization: `Bearer ${token}`
+						}
+					})
+					const result = await response.json()
 
-				//reset the global store
-				setStore({ demo: demo });
+					if(result.msg==="Token has expired"){
+						getActions().logout()
+					}
+					
+					if(result.User_list){
+						setStore({...getStore(), userList: result.User_list})
+					}
+				}catch(e){
+					console.error(e)
+				}
+			}, logout: () => {
+				localStorage.removeItem("token");
+				localStorage.removeItem("username");
+				setStore({...getStore(), isLogged: false })			
 			}
 		}
 	};
